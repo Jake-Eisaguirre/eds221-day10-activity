@@ -1,0 +1,144 @@
+---
+title: "activity"
+author: "Jake Eisaguirre"
+date: "8/20/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(here)
+library(janitor)
+library(lubridate)
+library(ggExtra)
+
+```
+
+
+```{r}
+
+ice <- read_csv(here("data", "ntl33_v7.csv"), na = "-999")
+
+mete <- read_csv(here("data", "ntl20_v6.csv"), na = "-999")
+
+```
+
+```{r}
+
+ice_plot <- ggplot(ice, aes(y = ice_duration, x = lakeid), na.rm = T) +
+  
+  geom_point(aes(color = lakeid)) +
+  
+  theme_classic() +
+  
+  labs(y = "Ice Duration (days)", x = "Lake", color = "Lake") +
+  
+  theme(legend.position = "bottom") +
+  
+  scale_x_discrete(labels = c("Mendota", "Monona", "Wingra"))
+  
+  
+ggMarginal(ice_plot, type = "boxplot", groupColour = T) 
+  
+  
+
+```
+
+```{r}
+
+annual_mean_ice_mad <- ice %>% 
+  
+  group_by(year4) %>% 
+  
+  summarize(mean_ice = round(mean(ice_duration, na.rm = T), 2))
+
+
+ggplot(annual_mean_ice_mad, aes(x = year4, y = mean_ice)) +
+  
+  geom_point() + 
+  
+  theme_classic() +
+  
+  labs(x = "Year", y  = "Mean Ice Duration (days)", title = "Mean Ice Duration of Lakes in the Madison Area"  ) +
+  
+  geom_smooth(method = "lm")
+
+```
+We can see over time there is a negative relationship with year and mean ice duraction. 
+
+```{r}
+
+mean_air_temp <- mete %>% 
+  
+  filter(month %in% c(12, 1, 2)) %>% 
+  
+  group_by(year4) %>% 
+  
+  summarize(mean_air = mean(ave_air_temp_adjusted, , na.rm = T))
+
+
+ggplot(mean_air_temp, aes(x = year4, y = mean_air)) +
+  
+  geom_point() +
+  
+  geom_smooth(method = "lm") +
+  
+  theme_classic() +
+  
+  labs(x = "Year", y = "Mean Air Temp (c)", title = "Mean Air Temp in the Madison Lake Area")
+
+```
+There seems to be a positive correlation between year and air temp.
+
+
+```{r}
+
+comb  <- mean_air_temp %>% 
+  
+  full_join(annual_mean_ice_mad, by = "year4", na.rm = T)
+
+
+
+ggplot(comb, aes(x = mean_air, y = mean_ice)) +
+  
+  geom_point() +
+  
+  theme_classic() +
+  
+  labs(x = "Air Temp (c)", y = "Ice Cover Duration (days)") +
+  
+  geom_smooth(method = "lm")
+  
+  
+  
+  
+
+```
+There seems to be a negativce correlation with air temp and ice cover duration. 
+
+
+```{r}
+
+sub_ice_cover_70 <- ice %>% 
+  
+  filter(year4 %in% c(1970:2019)) %>% 
+  
+  mutate(ice_off = as.Date(ice_off)) %>% 
+  
+  mutate(DofY = yday(ice_off))
+
+
+ggplot(sub_ice_cover_70, aes(x = year4, y = DofY)) +
+  
+  geom_point() +
+  
+  theme_classic() +
+  
+  labs(x = "Year", y = "Day of the Year when Ice Dissapears") +
+  
+   geom_smooth(method = "lm")
+
+
+```
+seems to be a very weak negative correlation between year and day of the year ice is gone. 
